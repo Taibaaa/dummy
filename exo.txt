@@ -1,0 +1,417 @@
+  //Exoplayer
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.18.1'
+    implementation 'com.google.android.exoplayer:exoplayer-ui:2.18.1'
+
+
+Manifest____________________________
+
+ <activity
+            android:name=".Player.PlayerActivity"
+            android:configChanges="uiMode|orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            tools:targetApi="n">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data
+                    android:mimeType="video/*"
+                    android:scheme="content" />
+            </intent-filter>
+        </activity>
+
+
+______________________________________Activity player
+
+package com.screen.recording.Player
+
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.os.Build
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.*
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ShareCompat
+import androidx.core.content.FileProvider
+import androidx.core.view.GestureDetectorCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.recyclerview.selection.SelectionTracker
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.ui.DefaultTimeBar
+import com.google.android.exoplayer2.ui.TimeBar
+import com.screen.recording.R
+import com.screen.recording.data.Recording
+import com.screen.recording.databinding.ActivityPlayerBinding
+import com.screen.recording.ui.MainActivity
+import java.io.File
+
+class PlayerActivity : AppCompatActivity(), View.OnClickListener,
+    GestureDetector.OnGestureListener {
+
+    private lateinit var binding: ActivityPlayerBinding
+    private lateinit var gestureDetectorCompat: GestureDetectorCompat
+    lateinit var runnable: Runnable
+    lateinit var player: ExoPlayer
+    lateinit var trackselector: DefaultTrackSelector
+    var url: String? = null
+    var name: String? = null
+    protected lateinit var selectionTracker: SelectionTracker<Recording>
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        /* supportRequestWindowFeature(Window.FEATURE_NO_TITLE)*/
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+        binding = ActivityPlayerBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+
+        toolbarOperations()
+        binding.playpause.setOnClickListener(this)
+        binding.back.setOnClickListener(this)
+
+
+        gestureDetectorCompat = GestureDetectorCompat(this, this)
+        //immersive mode
+        //  WindowCompat.setDecorFitsSystemWindows(window, false)
+        /*WindowInsetsControllerCompat(window, binding.root).let { controller ->
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }*/
+
+        createplayer(url!!, name!!)
+        seekbarFeature()
+        setVisibilty()
+        binding.playerView.setOnTouchListener { _, motionevent ->
+            gestureDetectorCompat.onTouchEvent(motionevent)
+            if (motionevent.action == MotionEvent.ACTION_UP) {
+                //immersive mode
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                WindowInsetsControllerCompat(window, binding.root).let { controller ->
+                    controller.hide(WindowInsetsCompat.Type.systemBars())
+                    controller.systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            }
+            return@setOnTouchListener false
+        }
+    }
+
+    private fun toolbarOperations() {
+        val toolbarText: TextView = findViewById(R.id.toolbar_title)
+        val tvBackIcn: ImageView = findViewById(R.id.backBtn)
+        val iconShare: ImageView = findViewById(R.id.shareVideo)
+
+
+        url = intent.extras!!.getString("Url")
+        name = intent.extras!!.getString("name")
+
+        toolbarText.isSelected = true
+        tvBackIcn.visibility = View.VISIBLE
+      /*  iconShare.visibility = View.VISIBLE*/
+        toolbarText.text = name
+
+
+        tvBackIcn.setOnClickListener {
+            pausevideo()
+            player.release()
+            finish()
+            onBackPressed()
+        }
+
+    }
+
+
+    private fun createplayer(url: String, name: String) {
+        trackselector = DefaultTrackSelector(this)
+        player = ExoPlayer.Builder(this).setTrackSelector(trackselector).build()
+        binding.playerView.player = player
+        val mediaItem = MediaItem.fromUri(url)
+        player.setMediaItem(mediaItem)
+        player.prepare()
+        binding.name.text = name
+        binding.name.isSelected = true
+        playvideo()
+        player.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                super.onPlaybackStateChanged(playbackState)
+                if (playbackState == Player.STATE_ENDED) {
+                    pausevideo()
+                    finish()
+                    player.release()
+                }
+            }
+        })
+    }
+
+    private fun playvideo() {
+        binding.playpause.setImageResource(R.drawable.play)
+        player.play()
+    }
+
+    private fun pausevideo() {
+        binding.playpause.setImageResource(R.drawable.pause)
+        player.pause()
+    }
+
+    fun setVisibilty() {
+        runnable = Runnable {
+            if (binding.playerView.isControllerVisible) changevisibilty(View.VISIBLE)
+            else changevisibilty(View.INVISIBLE)
+            Handler(Looper.myLooper()!!).postDelayed(runnable, 200)
+        }
+        Handler(Looper.myLooper()!!).postDelayed(runnable, 0)
+    }
+
+    private fun changevisibilty(visibility: Int) {
+        binding.topController.visibility = visibility
+        binding.playpause.visibility = visibility
+    }
+
+    private fun seekbarFeature() {
+        findViewById<DefaultTimeBar>(com.google.android.exoplayer2.ui.R.id.exo_progress).addListener(
+            object : TimeBar.OnScrubListener {
+                override fun onScrubStart(timeBar: TimeBar, position: Long) {
+                    pausevideo()
+                }
+
+                override fun onScrubMove(timeBar: TimeBar, position: Long) {
+                    player.seekTo(position)
+                }
+
+                override fun onScrubStop(timeBar: TimeBar, position: Long, canceled: Boolean) {
+                    playvideo()
+                }
+
+            })
+    }
+
+    override fun onClick(v: View?) {
+        when (v?.id) {
+            /*  R.id.back -> {
+                  pausevideo()
+                  player.release()
+                  finish()
+                  onBackPressed()
+              }*/
+            R.id.playpause -> {
+                if (player.isPlaying) pausevideo()
+                else playvideo()
+            }
+        }
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+        pausevideo()
+        player.release()
+
+        val intent = Intent(this, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+        startActivity(intent)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        pausevideo()
+    }
+
+    override fun onDown(e: MotionEvent): Boolean = false
+
+    override fun onShowPress(e: MotionEvent) = Unit
+
+    override fun onSingleTapUp(e: MotionEvent): Boolean = false
+
+    override fun onScroll(
+        e1: MotionEvent,
+        e2: MotionEvent,
+        distanceX: Float,
+        distanceY: Float
+    ): Boolean = false
+
+    override fun onLongPress(e: MotionEvent) = Unit
+
+    override fun onFling(
+        e1: MotionEvent,
+        e2: MotionEvent,
+        velocityX: Float,
+        velocityY: Float
+    ): Boolean = false
+}
+
+
+
+
+
+
+_________________________________________________UII
+
+
+
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <include
+        android:id="@+id/toolbarPlayer"
+        layout="@layout/toolbar_player"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.exoplayer2.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="@dimen/_50sdp"
+        android:keepScreenOn="true"
+        app:controller_layout_id="@layout/custom_player_view"
+        app:keep_content_on_player_reset="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/toolbarPlayer"
+        app:show_buffering="always">
+
+    </com.google.android.exoplayer2.ui.PlayerView>
+
+    <ImageView
+        android:id="@+id/playpause"
+        android:layout_width="@dimen/_40sdp"
+        android:layout_height="@dimen/_40sdp"
+        android:layout_gravity="bottom"
+        android:src="@drawable/play"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/player_view"
+        app:layout_constraintStart_toStartOf="@+id/player_view"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/topController"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/_40sdp"
+        android:layout_marginTop="@dimen/_10sdp"
+        android:background="@android:color/transparent"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/back"
+            android:layout_width="@dimen/_20sdp"
+            android:layout_height="@dimen/_20sdp"
+            android:layout_marginStart="@dimen/_10sdp"
+            android:layout_marginTop="@dimen/_10sdp"
+            android:src="@drawable/back1"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/_40sdp"
+            android:layout_marginTop="@dimen/_10sdp"
+            android:layout_marginEnd="@dimen/_20sdp"
+            android:ellipsize="marquee"
+            android:fontFamily="@font/inter_medium"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:singleLine="true"
+            android:text=""
+            android:textColor="@color/white"
+            android:textSize="@dimen/_11sdp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/back"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+____________________________________________________________________Custom Player.xml
+
+
+
+
+
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:layout_margin="@dimen/_10sdp"
+    android:background="@drawable/rectangle_40"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@id/exo_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginVertical="10dp"
+            android:paddingStart="@dimen/_4sdp"
+            android:text="Position"
+            android:textColor="@color/white"
+            android:textSize="12sp" />
+
+
+        <com.google.android.exoplayer2.ui.DefaultTimeBar
+            android:id="@id/exo_progress"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="8dp"
+            android:layout_weight="1"
+            app:buffered_color="#BCBDC2"
+            app:played_color="@color/mainColor"
+            app:scrubber_color="@color/mainColor" />
+
+        <TextView
+            android:id="@id/exo_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="10dp"
+            android:text="Loading..."
+            android:textColor="@color/white"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</LinearLayout>
