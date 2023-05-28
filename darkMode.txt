@@ -1,0 +1,9 @@
+ ___________________________________THemes______________________________________
+
+<!--  //for removing the darkmode-->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+
+
+_________________________________in onCreate____________________________
+ //turn off dark mode
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
