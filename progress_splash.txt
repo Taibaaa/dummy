@@ -1,0 +1,180 @@
+Splash_Progress_backend________________________________________
+
+
+import android.animation.ValueAnimator
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.os.CountDownTimer
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
+import android.view.animation.ScaleAnimation
+import com.quiz.application.R
+import com.quiz.application.databinding.ActivityProgressBarCustomBinding
+
+class ProgressBarCustom : AppCompatActivity() {
+
+    private lateinit var binding: ActivityProgressBarCustomBinding
+    private var startText: String? = "Start Here"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityProgressBarCustomBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+// Set the initial progress text
+        binding.progressText.text = "10%"
+
+        val totalDuration = 6000 // Total duration in milliseconds
+        val interval = 1000 // Interval in milliseconds
+        val progressIncrement = 10 // Increment value for each interval
+
+        val countDownTimer = object : CountDownTimer(totalDuration.toLong(), interval.toLong()) {
+            var progress = 10 // Initial progress value
+
+            override fun onTick(millisUntilFinished: Long) {
+                progress += progressIncrement
+                binding.progressBar.progress = progress
+                val progressPercentage = (progress * 100) / binding.progressBar.max
+                binding.progressText.text = "$progressPercentage%"
+            }
+
+           /* override fun onFinish() {
+                // Animate the ProgressBar inside and outside
+                val scaleAnimation = ScaleAnimation(
+                    1f, 0f, 1f, 1f,
+                    Animation.RELATIVE_TO_SELF, 0.5f,
+                    Animation.RELATIVE_TO_SELF, 0.5f
+                )
+                scaleAnimation.duration = 500
+                scaleAnimation.repeatCount = 1
+                scaleAnimation.repeatMode = Animation.REVERSE
+                binding.progressBar.startAnimation(scaleAnimation)
+
+                scaleAnimation.setAnimationListener(object : Animation.AnimationListener {
+                    override fun onAnimationStart(animation: Animation?) {}
+
+                    override fun onAnimationEnd(animation: Animation?) {
+                        binding.progressBar.progress = binding.progressBar.max
+                        binding.progressText.text = startText
+
+                        // Animate the ProgressBar back to its original state
+                        val reverseScaleAnimation = ScaleAnimation(
+                            0f, 1f, 1f, 1f,
+                            Animation.RELATIVE_TO_SELF, 0.5f,
+                            Animation.RELATIVE_TO_SELF, 0.5f
+                        )
+                        reverseScaleAnimation.duration = 500
+                        binding.progressBar.startAnimation(reverseScaleAnimation)
+                    }
+
+                    override fun onAnimationRepeat(animation: Animation?) {}
+                })
+            }*/
+
+            override fun onFinish() {
+                binding.progressBar.progress = binding.progressBar.max
+                binding.progressText.text = startText
+
+                val initialWidth = binding.progressBar.width
+                val targetWidth = 800 // Desired target width for the animation
+
+                val anim = ValueAnimator.ofInt(initialWidth, targetWidth)
+                anim.addUpdateListener { valueAnimator ->
+                    val animatedValue = valueAnimator.animatedValue as Int
+                    val layoutParams = binding.progressBar.layoutParams
+                    layoutParams.width = animatedValue
+                    binding.progressBar.layoutParams = layoutParams
+                }
+
+                anim.duration = 1200 // Duration of the animation in milliseconds
+                anim.repeatCount = ValueAnimator.INFINITE // Repeat the animation indefinitely
+                anim.repeatMode = ValueAnimator.REVERSE // Reverse the animation on each repeat
+
+                anim.start()
+
+            }
+        }
+
+        countDownTimer.start()
+    }
+}
+
+
+
+
+____________________________-xml progress__________________________________
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#31D686"
+    tools:context=".ui.ProgressBarCustom">
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/_30sdp"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="@dimen/_20sdp"
+        android:layout_marginEnd="@dimen/_20sdp"
+        android:max="100"
+        android:progressDrawable="@drawable/progress_bar_style"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:trackCornerRadius="@dimen/_30sdp" />
+
+    <TextView
+        android:id="@+id/progressText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@id/progressBar"
+        android:layout_alignBottom="@id/progressBar"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:text="Progress Here 0%"
+        android:textColor="@android:color/black"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="@+id/progressBar"
+        app:layout_constraintEnd_toEndOf="@+id/progressBar"
+        app:layout_constraintStart_toStartOf="@+id/progressBar"
+        app:layout_constraintTop_toTopOf="@+id/progressBar" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+____________________________________________________@drawable/progress_bar_style___________________________________
+
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="20dp" />
+            <solid android:color="#E9E9E9" />
+        </shape>
+    </item>
+
+    <item android:id="@android:id/progress">
+        <scale android:scaleWidth="100%">
+            <shape android:shape="rectangle">
+                <corners android:radius="20dp" />
+                <solid android:color="@color/white" />
+            </shape>
+        </scale>
+
+    </item>
+
+</layer-list>
+
+
+
+
+
+
+
