@@ -1,0 +1,98 @@
+______________Make function to refresh list with viewModel_____________
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+
+class SavedVideosViewModel : ViewModel() {
+    private val _savedVideos = MutableLiveData<List<Video>>()
+    val savedVideos: LiveData<List<Video>> = _savedVideos
+
+    fun updateSavedVideos(newVideos: List<Video>) {
+        _savedVideos.value = newVideos
+    }
+}
+
+
+____________________In the fragment where you save the videos, update the SavedVideosViewModel with the new list:____________
+
+class SaveVideoFragment : Fragment() {
+    private lateinit var viewModel: SavedVideosViewModel
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        // Initialize the ViewModel
+        viewModel = ViewModelProvider(requireActivity()).get(SavedVideosViewModel::class.java)
+        
+        // Code to save the video
+        
+        // Update the ViewModel with the new list of saved videos
+        viewModel.updateSavedVideos(newVideos)
+
+        return inflater.inflate(R.layout.fragment_save_video, container, false)
+    }
+}
+
+___________________________In the fragment where you display the saved videos, observe the LiveData to refresh the UI:___________________
+class SavedVideosFragment : Fragment() {
+    private lateinit var viewModel: SavedVideosViewModel
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        // Initialize the ViewModel
+        viewModel = ViewModelProvider(requireActivity()).get(SavedVideosViewModel::class.java)
+
+        // Observe the LiveData to refresh the UI
+        viewModel.savedVideos.observe(viewLifecycleOwner, Observer { videos ->
+            // Update the UI with the new list of saved videos
+            updateUI(videos)
+        })
+
+        return inflater.inflate(R.layout.fragment_saved_videos, container, false)
+    }
+
+    private fun updateUI(videos: List<Video>) {
+        // Update the UI with the new list of saved videos
+    }
+}
+
+
+No, assigning a list of videos once to _savedVideos without using the updateSavedVideos function will not automatically update the list in LiveData.
+
+The MutableLiveData object provides a way to set or update the value of the underlying data using the setValue or postValue methods respectively. By directly assigning a value to the _savedVideos variable, you bypass the LiveData mechanism, and the observers will not be notified of the change.
+
+To update the value and trigger the observers, you should use the setValue or postValue methods provided by MutableLiveData. In your case, you can use the setValue method to assign the list of videos to _savedVideos:
+
+
+_savedVideos.value = newVideos
+
+This way, the observers of savedVideos will be notified of the new value, and the UI can be updated accordingly.
+
+If you assign a new list of videos to _savedVideos multiple times, using setValue each time, the observers will be notified and the UI will be updated accordingly.
+
+Remember to observe the savedVideos LiveData in the fragment to receive updates whenever the list of saved videos changes.
+
+kotlin
+
+viewModel.savedVideos.observe(viewLifecycleOwner, Observer { videos ->
+    // Update the UI with the new list of saved videos
+    updateUI(videos)
+})
+By following this approach, you can ensure that the UI reflects the updated list of saved videos whenever it changes.
+
+I hope this clarifies the behavior of LiveData and how to update its value to trigger observers and update the UI.
+
+
+
+
+
+
+
+
+
