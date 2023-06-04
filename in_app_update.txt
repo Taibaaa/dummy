@@ -1,0 +1,46 @@
+https://www.youtube.com/watch?v=up55bpzqyHc
+(in app update tutoriral)
+
+
+ fun UpdateApp() {
+        val appUpdateManager = AppUpdateManagerFactory.create(this)
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo
+        // Checks that the platform will allow the specified type of update.
+        appUpdateInfoTask.addOnSuccessListener { result ->
+            if (result.updateAvailability() === UpdateAvailability.UPDATE_AVAILABLE) {
+//                requestUpdate(result);
+                val ctw: ContextThemeWrapper =
+                    ContextThemeWrapper(this, R.style.AlertDialogTheme)
+                val alertDialogBuilder =
+                    AlertDialog.Builder(ctw)
+                alertDialogBuilder.setTitle("Update NTT Netmagic")
+                alertDialogBuilder.setCancelable(false)
+                alertDialogBuilder.setIcon(R.drawable.app_icon_sr)
+                alertDialogBuilder.setMessage("Fitness Trainer recommends that you update to the latest version for a seamless & enhanced performance of the app.")
+                alertDialogBuilder.setPositiveButton(
+                    "Update"
+                ) { dialog, id ->
+                    try {
+                        startActivity(
+                            Intent(
+                                "android.intent.action.VIEW",
+                                Uri.parse("market://details?id=$packageName")
+                            )
+                        )
+                    } catch (e: ActivityNotFoundException) {
+                        startActivity(
+                            Intent(
+                                "android.intent.action.VIEW",
+                                Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+                            )
+                        )
+                    }
+                }
+                alertDialogBuilder.setNegativeButton(
+                    "No Thanks"
+                ) { dialog, id -> }
+                alertDialogBuilder.show()
+            } else {
+            }
+        }
+    }
